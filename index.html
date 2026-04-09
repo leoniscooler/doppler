@@ -24,31 +24,98 @@
     border-radius: 6px;
     background: #fff;
     display: block;
-    cursor: default;
+    cursor: grab;
   }
+  #simCanvas.dragging { cursor: grabbing; }
+  .zoom-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: .8rem;
+    color: #666;
+  }
+  .zoom-bar button {
+    padding: 3px 10px;
+    font-size: .8rem;
+    border: 1px solid #b0b8c4;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    color: #444;
+  }
+  .zoom-bar button:hover { background: #eef1f6; }
 
   /* ---- Controls ---- */
-  .controls {
+  .controls-wrapper {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 22px;
+    gap: 12px;
     justify-content: center;
-    margin-top: 12px;
-    max-width: 900px;
+    margin-top: 14px;
+    max-width: 920px;
+    width: 100%;
+  }
+  .panel {
+    background: #fff;
+    border: 1px solid #d3d9e3;
+    border-radius: 8px;
+    padding: 12px 16px 14px;
+    flex: 1 1 200px;
+    min-width: 200px;
+    max-width: 310px;
+  }
+  .panel-header {
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #7a8599;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel-header .icon {
+    font-size: 1rem;
+    line-height: 1;
   }
   .ctrl-group {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    min-width: 170px;
+    align-items: stretch;
+    margin-bottom: 10px;
   }
+  .ctrl-group:last-child { margin-bottom: 0; }
   .ctrl-group label {
     font-size: .82rem;
     font-weight: 600;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
   }
-  .ctrl-group input[type=range] { width: 170px; }
-  .ctrl-group .val { font-size: .78rem; color: #666; margin-top: 1px; }
+  .ctrl-group label .val {
+    font-weight: 400;
+    font-size: .76rem;
+    color: #666;
+  }
+  .ctrl-group input[type=range] {
+    width: 100%;
+    margin: 0;
+    accent-color: #4a7cff;
+  }
+  .ctrl-group input[type=range].red   { accent-color: #d63030; }
+  .ctrl-group input[type=range].green { accent-color: #2e7d32; }
+
+  /* Action buttons */
+  .btn-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+    justify-content: center;
+  }
 
   .btn-row {
     display: flex;
@@ -57,14 +124,16 @@
     flex-wrap: wrap;
   }
   .btn-row button {
-    padding: 7px 18px;
-    font-size: .88rem;
+    padding: 8px 16px;
+    font-size: .85rem;
     border: 1.5px solid #4a7cff;
-    border-radius: 5px;
+    border-radius: 6px;
     background: #4a7cff;
     color: #fff;
     cursor: pointer;
     transition: background .15s;
+    width: 100%;
+    text-align: center;
   }
   .btn-row button:hover { background: #3565e0; }
   .btn-row button.secondary { background: #fff; color: #4a7cff; }
@@ -73,44 +142,59 @@
   .chk-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 16px;
-    margin-top: 8px;
-    justify-content: center;
-    max-width: 900px;
+    gap: 4px 12px;
+    justify-content: flex-start;
   }
-  .chk-row label { font-size: .82rem; cursor: pointer; user-select: none; }
-  .chk-row input { margin-right: 4px; }
+  .chk-row label { font-size: .8rem; cursor: pointer; user-select: none; }
+  .chk-row input { margin-right: 3px; }
 
   /* ---- Audio controls ---- */
   .audio-panel {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 20px;
-    align-items: center;
-    justify-content: center;
-    margin-top: 10px;
-    max-width: 900px;
-    background: #fff;
-    border: 1px solid #d3d9e3;
-    border-radius: 6px;
-    padding: 10px 18px;
+    gap: 10px 16px;
+    align-items: flex-end;
   }
   .audio-panel.off { opacity: 0.45; }
-  .audio-panel label { font-size: .82rem; font-weight: 600; }
+  .audio-panel label { font-size: .82rem; font-weight: 600; display: flex; flex-direction: column; gap: 2px; }
+  .audio-panel label.inline { flex-direction: row; align-items: center; gap: 6px; }
   .audio-panel select {
     font-size: .82rem;
-    padding: 3px 6px;
-    border-radius: 4px;
+    padding: 4px 8px;
+    border-radius: 5px;
     border: 1px solid #b0b8c4;
   }
-  .audio-panel input[type=range] { width: 120px; }
-  .audio-panel .val { font-size: .76rem; color: #666; }
+  .audio-panel input[type=range] { width: 100%; accent-color: #4a7cff; }
+  .audio-panel .val { font-size: .74rem; color: #666; font-weight: 400; }
   .audio-hint {
     font-size: .76rem;
     color: #888;
     text-align: center;
     margin-top: 2px;
   }
+  /* Click-to-start overlay */
+  #audioOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    cursor: pointer;
+  }
+  #audioOverlay .msg {
+    background: #fff;
+    padding: 28px 48px;
+    border-radius: 12px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #333;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    text-align: center;
+    line-height: 1.5;
+  }
+  #audioOverlay .msg span { font-size: .85rem; color: #777; font-weight: 400; }
 
   /* ---- Readouts ---- */
   .readouts {
@@ -154,60 +238,98 @@
 <p class="subtitle">Watch how wavefronts bunch up ahead of a moving source and spread out behind it.</p>
 
 <canvas id="simCanvas" width="900" height="420"></canvas>
+<div class="zoom-bar">
+  <button id="btnZoomIn" title="Zoom in">+</button>
+  <button id="btnZoomOut" title="Zoom out">&minus;</button>
+  <button id="btnZoomReset" title="Reset view">Reset View</button>
+  <span id="zoomLevel">100%</span>
+  <span style="color:#aaa">| Scroll to zoom, drag to pan</span>
+</div>
 
 <!-- Controls -->
-<div class="controls">
-  <div class="ctrl-group">
-    <label for="sliderSrcSpeed">Source Speed (v<sub>s</sub>)</label>
-    <input type="range" id="sliderSrcSpeed" min="0" max="8" value="2.4" step="0.1">
-    <span class="val" id="valSrcSpeed">2.4 m/s</span>
-  </div>
-  <div class="ctrl-group">
-    <label for="sliderWaveSpeed">Wave Speed (v)</label>
-    <input type="range" id="sliderWaveSpeed" min="0.5" max="8" value="4.0" step="0.1">
-    <span class="val" id="valWaveSpeed">4.0 m/s</span>
-  </div>
-  <div class="ctrl-group">
-    <label for="sliderFreq">Emission Frequency (f)</label>
-    <input type="range" id="sliderFreq" min="0.5" max="8" value="3" step="0.1">
-    <span class="val" id="valFreq">3.0 Hz</span>
-  </div>
-  <div class="btn-row">
-    <button id="btnPlayPause">Pause</button>
-    <button id="btnReset" class="secondary">Reset</button>
-    <button id="btnSlowMo" class="secondary">Slow-Mo: Off</button>
-  </div>
-</div>
+<div class="controls-wrapper">
 
-<div class="chk-row">
-  <label><input type="checkbox" id="chkWavefronts" checked> Wavefronts</label>
-  <label><input type="checkbox" id="chkLabels" checked> Labels</label>
-  <label><input type="checkbox" id="chkReadouts" checked> Observer Readouts</label>
-  <label><input type="checkbox" id="chkMachCone" checked> Mach Cone</label>
-  <label><input type="checkbox" id="chkPath" checked> Source Path</label>
-</div>
+  <!-- Source & Wave panel -->
+  <div class="panel">
+    <div class="panel-header">Source &amp; Wave</div>
+    <div class="ctrl-group">
+      <label>Source Speed (v<sub>s</sub>) <span class="val" id="valSrcSpeed">206 m/s (Mach 0.60)</span></label>
+      <input type="range" id="sliderSrcSpeed" min="0" max="900" value="206" step="1">
+    </div>
+    <div class="ctrl-group">
+      <label>Speed of Sound (v) <span class="val" id="valWaveSpeed">343 m/s</span></label>
+      <input type="range" id="sliderWaveSpeed" min="50" max="700" value="343" step="1">
+    </div>
+    <div class="ctrl-group">
+      <label>Emission Frequency (f) <span class="val" id="valFreq">3.0 Hz</span></label>
+      <input type="range" id="sliderFreq" min="0.5" max="8" value="3" step="0.1">
+    </div>
+  </div>
 
-<!-- Audio controls -->
-<div class="audio-panel" id="audioPanel">
-  <label><input type="checkbox" id="chkSound"> Sound</label>
-  <label>Base Tone
-    <input type="range" id="sliderTone" min="150" max="800" value="440" step="1">
-    <span class="val" id="valTone">440 Hz</span>
-  </label>
-  <label>Volume
-    <input type="range" id="sliderVolume" min="0" max="100" value="40" step="1">
-    <span class="val" id="valVolume">40%</span>
-  </label>
-  <label>Listen as
-    <select id="selListener">
-      <option value="both" selected>Both (Stereo)</option>
-      <option value="front">Front Observer</option>
-      <option value="rear">Rear Observer</option>
-      <option value="source">Source (emitted)</option>
-    </select>
-  </label>
+  <!-- Observers panel -->
+  <div class="panel">
+    <div class="panel-header">Observers</div>
+    <div class="ctrl-group">
+      <label style="color:#d63030">Front Observer Speed <span class="val" id="valObsFront">0 m/s</span></label>
+      <input type="range" class="red" id="sliderObsFront" min="-400" max="400" value="0" step="1">
+    </div>
+    <div class="ctrl-group">
+      <label style="color:#2e7d32">Rear Observer Speed <span class="val" id="valObsRear">0 m/s</span></label>
+      <input type="range" class="green" id="sliderObsRear" min="-400" max="400" value="0" step="1">
+    </div>
+  </div>
+
+  <!-- Audio panel -->
+  <div class="panel">
+    <div class="panel-header">Audio</div>
+    <div class="audio-panel" id="audioPanel">
+      <label class="inline"><input type="checkbox" id="chkSound" checked> Sound On</label>
+      <label>Base Tone <span class="val" id="valTone">440 Hz</span>
+        <input type="range" id="sliderTone" min="150" max="800" value="440" step="1">
+      </label>
+      <label>Volume <span class="val" id="valVolume">40%</span>
+        <input type="range" id="sliderVolume" min="0" max="100" value="40" step="1">
+      </label>
+      <label>Listen as
+        <select id="selListener">
+          <option value="both" selected>Both (Stereo)</option>
+          <option value="front">Front Observer</option>
+          <option value="rear">Rear Observer</option>
+          <option value="source">Source (emitted)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Playback & Display panel -->
+  <div class="panel btn-panel">
+    <div class="panel-header">Playback</div>
+    <div class="btn-row">
+      <button id="btnPlayPause">Pause</button>
+    </div>
+    <div class="btn-row">
+      <button id="btnReset" class="secondary">Reset</button>
+    </div>
+    <div class="btn-row">
+      <button id="btnSlowMo" class="secondary">Slow-Mo: Off</button>
+    </div>
+    <div class="panel-header" style="margin-top:8px">Display</div>
+    <div class="chk-row">
+      <label><input type="checkbox" id="chkWavefronts" checked> Wavefronts</label>
+      <label><input type="checkbox" id="chkLabels" checked> Labels</label>
+      <label><input type="checkbox" id="chkReadouts" checked> Readouts</label>
+      <label><input type="checkbox" id="chkMachCone" checked> Mach Cone</label>
+      <label><input type="checkbox" id="chkPath" checked> Path</label>
+    </div>
+  </div>
+
 </div>
-<p class="audio-hint" id="audioHint">Enable Sound and click anywhere to start audio (browser requires a user gesture).</p>
+<p class="audio-hint" id="audioHint" style="display:none">Enable Sound and click anywhere to start audio (browser requires a user gesture).</p>
+
+<!-- Click-to-start overlay -->
+<div id="audioOverlay">
+  <div class="msg">Click anywhere to start the simulation with audio<br><span>Browsers require a user gesture to play sound</span></div>
+</div>
 
 <!-- Readouts -->
 <div class="readouts" id="readoutsPanel">
@@ -234,9 +356,10 @@ const ctx    = canvas.getContext('2d');
 const W = canvas.width, H = canvas.height;
 
 // --- Scale: pixels per meter ---
-const PPM = 50;                       // 50 px = 1 m
-const W_M = W / PPM;                  // world width in metres  (18 m)
-const H_M = H / PPM;                  // world height in metres (8.4 m)
+// PPM chosen so visual speed matches original (343 m/s wave → ~200 px/s on screen)
+const PPM = 200 / 343;                // ≈ 0.583 px/m
+const W_M = W / PPM;                  // world width in metres  (≈ 1544 m)
+const H_M = H / PPM;                  // world height in metres (≈ 720 m)
 
 function toPixX(m) { return m * PPM; }
 function toPixY(m) { return m * PPM; }
@@ -244,10 +367,12 @@ function toPixR(m) { return m * PPM; }  // radius / length
 
 // All positions & speeds are now in METRES / METRES-PER-SECOND
 const sourceY = H_M * 0.48;            // ≈ 4.03 m
-const observerFrontX = W_M * 0.82;     // ≈ 14.76 m
-const observerRearX  = W_M * 0.18;     // ≈ 3.24 m
+const observerFrontXStart = W_M * 0.82; // ≈ 14.76 m
+const observerRearXStart  = W_M * 0.18; // ≈ 3.24 m
+let observerFrontX = observerFrontXStart;
+let observerRearX  = observerRearXStart;
 const observerY = sourceY;
-const sourceXStart = 1.2;              // 1.2 m from left edge
+const sourceXStart = W_M * 0.065;     // ≈ same proportional start as before
 
 // Pulse object: { ox, oy, birthTime }  (ox/oy in metres)
 let pulses = [];
@@ -259,10 +384,22 @@ let sourceX      = sourceXStart;        // metres
 let playing      = true;
 let slowMo       = false;
 
-// Parameters (updated from sliders) – now m/s
-let sourceSpeed  = 2.4;                // m/s
-let waveSpeed    = 4.0;                // m/s
+// Zoom & pan state (camera)
+let camZoom = 1;        // 1 = default
+let camPanX = 0;        // pan offset in screen pixels
+let camPanY = 0;
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragPanStartX = 0;
+let dragPanStartY = 0;
+
+// Parameters (updated from sliders) – real-world m/s
+let sourceSpeed  = 206;                // m/s (≈ Mach 0.60)
+let waveSpeed    = 343;                // m/s (speed of sound in air at 20°C)
 let emitFreq     = 3;                  // pulses per second
+let obsFrontSpeed = 0;                 // m/s (positive = rightward)
+let obsRearSpeed  = 0;                 // m/s
 
 // Observer hit tracking for perceived frequency
 let frontHits = [];       // timestamps when a wavefront crosses front observer
@@ -282,7 +419,7 @@ let panFront       = null;
 let panRear        = null;
 let masterGain     = null;
 let audioReady     = false;
-let soundEnabled   = false;
+let soundEnabled   = true;
 let baseTone       = 440;    // Hz
 let volumePct      = 40;     // 0-100
 let listenerMode   = 'both'; // 'both' | 'front' | 'rear' | 'source'
@@ -330,7 +467,7 @@ function updateAudio() {
   const t = audioCtx.currentTime;
 
   // Master volume
-  const vol = soundEnabled && playing ? (volumePct / 100) * 0.35 : 0;
+  const vol = soundEnabled && playing ? (volumePct / 100) * 5.0 : 0;
   masterGain.gain.setTargetAtTime(vol, t, 0.05);
 
   if (!soundEnabled || !playing) return;
@@ -338,20 +475,29 @@ function updateAudio() {
   const mach = sourceSpeed / waveSpeed;
 
   // --- Compute Doppler-shifted frequencies ---
+  // General formula: f' = f * (v ± v_o) / (v ∓ v_s)
+  // Sign convention: source moves right (+), observer moving toward source is +
   let fFront, fRear, fSource;
   fSource = baseTone;  // emitted tone
 
-  if (sourceSpeed <= 0) {
+  // Relative velocity of front observer toward source:
+  // Source approaches from left, so "toward source" for front observer = leftward = negative speed
+  // v_o_front toward source = -obsFrontSpeed  (if observer moves left, it's toward source)
+  // v_s toward front observer = +sourceSpeed
+  // f' = f * (v + v_o_toward) / (v - v_s_toward)
+  const voFrontToward = -obsFrontSpeed;  // front obs moving left → toward source
+  const voRearToward  =  obsRearSpeed;   // rear obs moving right → toward source (which is ahead)
+
+  if (waveSpeed > sourceSpeed) {
+    fFront = baseTone * (waveSpeed + voFrontToward) / (waveSpeed - sourceSpeed);
+    fRear  = baseTone * (waveSpeed + voRearToward)  / (waveSpeed + sourceSpeed);
+  } else if (sourceSpeed <= 0 && obsFrontSpeed === 0 && obsRearSpeed === 0) {
     fFront = baseTone;
     fRear  = baseTone;
-  } else if (sourceSpeed < waveSpeed) {
-    fFront = baseTone * waveSpeed / (waveSpeed - sourceSpeed);
-    fRear  = baseTone * waveSpeed / (waveSpeed + sourceSpeed);
   } else {
-    // Supersonic: front observer hasn't been reached yet → silence front,
-    // or if shock has passed play a burst. We'll cap + mute.
-    fFront = baseTone * 6;  // very high pitch to represent shock
-    fRear  = baseTone * waveSpeed / (waveSpeed + sourceSpeed);
+    // Supersonic
+    fFront = baseTone * 6;
+    fRear  = baseTone * (waveSpeed + voRearToward) / (waveSpeed + sourceSpeed);
   }
 
   // Clamp to audible range
@@ -406,9 +552,33 @@ function updateAudio() {
 }
 
 // Resume AudioContext on any user gesture (browser autoplay policy)
-document.addEventListener('click', () => {
+let hadGesture = false;
+function ensureAudio() {
+  hadGesture = true;
+  if (!audioReady && soundEnabled) initAudio();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-}, { once: false });
+}
+
+// The overlay captures the very first interaction
+const audioOverlay = document.getElementById('audioOverlay');
+audioOverlay.addEventListener('click', () => {
+  ensureAudio();
+  audioOverlay.style.display = 'none';
+});
+
+['click','mousedown','touchstart','keydown','pointerdown'].forEach(evt =>
+  document.addEventListener(evt, ensureAudio, { once: false })
+);
+
+// Suspend audio when tab is hidden, resume when visible
+document.addEventListener('visibilitychange', () => {
+  if (!audioCtx) return;
+  if (document.hidden) {
+    audioCtx.suspend();
+  } else if (soundEnabled && hadGesture) {
+    audioCtx.resume();
+  }
+});
 
 // ===========================================================
 //  UI ELEMENTS
@@ -416,9 +586,13 @@ document.addEventListener('click', () => {
 const sliderSrcSpeed = document.getElementById('sliderSrcSpeed');
 const sliderWaveSpeed = document.getElementById('sliderWaveSpeed');
 const sliderFreq     = document.getElementById('sliderFreq');
+const sliderObsFront = document.getElementById('sliderObsFront');
+const sliderObsRear  = document.getElementById('sliderObsRear');
 const valSrcSpeed    = document.getElementById('valSrcSpeed');
 const valWaveSpeed   = document.getElementById('valWaveSpeed');
 const valFreq        = document.getElementById('valFreq');
+const valObsFront    = document.getElementById('valObsFront');
+const valObsRear     = document.getElementById('valObsRear');
 const btnPlayPause   = document.getElementById('btnPlayPause');
 const btnReset       = document.getElementById('btnReset');
 const btnSlowMo      = document.getElementById('btnSlowMo');
@@ -444,10 +618,11 @@ const audioPanel  = document.getElementById('audioPanel');
 
 chkSound.addEventListener('change', () => {
   soundEnabled = chkSound.checked;
-  if (soundEnabled) initAudio();
+  if (soundEnabled) ensureAudio();
   audioPanel.classList.toggle('off', !soundEnabled);
 });
-audioPanel.classList.add('off');  // start dimmed
+// Try to init audio immediately (works in some browsers without gesture)
+try { initAudio(); } catch(e) {}
 
 sliderTone.addEventListener('input', () => {
   baseTone = +sliderTone.value;
@@ -461,19 +636,38 @@ selListener.addEventListener('change', () => {
   listenerMode = selListener.value;
 });
 
+// Helper to format speed with Mach number
+function fmtSpeed(v) {
+  const m = v / waveSpeed;
+  return v + ' m/s (Mach ' + m.toFixed(2) + ')';
+}
+function fmtObsSpeed(v) {
+  return v + ' m/s';
+}
+
 // Slider listeners
 sliderSrcSpeed.addEventListener('input', () => {
   sourceSpeed = +sliderSrcSpeed.value;
-  valSrcSpeed.textContent = sourceSpeed.toFixed(1) + ' m/s';
+  valSrcSpeed.textContent = fmtSpeed(sourceSpeed);
 });
 sliderWaveSpeed.addEventListener('input', () => {
   waveSpeed = +sliderWaveSpeed.value;
-  valWaveSpeed.textContent = waveSpeed.toFixed(1) + ' m/s';
+  valWaveSpeed.textContent = waveSpeed + ' m/s';
+  // Update source label too since Mach depends on wave speed
+  valSrcSpeed.textContent = fmtSpeed(sourceSpeed);
 });
 sliderFreq.addEventListener('input', () => {
   emitFreq = +sliderFreq.value;
   valFreq.textContent = emitFreq.toFixed(1) + ' Hz';
   roEmit.textContent = emitFreq.toFixed(1) + ' Hz';
+});
+sliderObsFront.addEventListener('input', () => {
+  obsFrontSpeed = +sliderObsFront.value;
+  valObsFront.textContent = fmtObsSpeed(obsFrontSpeed);
+});
+sliderObsRear.addEventListener('input', () => {
+  obsRearSpeed = +sliderObsRear.value;
+  valObsRear.textContent = fmtObsSpeed(obsRearSpeed);
 });
 
 btnPlayPause.addEventListener('click', () => {
@@ -497,13 +691,184 @@ function resetSim() {
   simTime = 0;
   emitTimer = 0;
   sourceX = sourceXStart;
+  observerFrontX = observerFrontXStart;
+  observerRearX  = observerRearXStart;
   frontHits = [];
   rearHits  = [];
   perceivedFront = null;
   perceivedRear  = null;
   playing = true;
   btnPlayPause.textContent = 'Pause';
+  // Reset camera
+  camZoom = 1; camPanX = 0; camPanY = 0;
+  document.getElementById('zoomLevel').textContent = '100%';
 }
+
+// ===========================================================
+//  ZOOM & PAN
+// ===========================================================
+const zoomLevelEl = document.getElementById('zoomLevel');
+const MIN_ZOOM = 0.15, MAX_ZOOM = 10;
+
+function setZoom(newZoom, pivotX, pivotY) {
+  // pivotX/pivotY are in canvas pixel coords (mouse position)
+  newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
+  if (pivotX !== undefined) {
+    // Keep the point under the cursor fixed
+    const wx = (pivotX - camPanX - W / 2) / camZoom + W / 2;
+    const wy = (pivotY - camPanY - H / 2) / camZoom + H / 2;
+    camPanX = pivotX - (wx - W / 2) * newZoom - W / 2;
+    camPanY = pivotY - (wy - H / 2) * newZoom - H / 2;
+  }
+  camZoom = newZoom;
+  zoomLevelEl.textContent = Math.round(camZoom * 100) + '%';
+}
+
+// Mouse wheel zoom
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (W / rect.width);
+  const my = (e.clientY - rect.top) * (H / rect.height);
+  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+  setZoom(camZoom * factor, mx, my);
+}, { passive: false });
+
+// Mouse drag pan
+// --- Draggable entities ---
+let dragTarget = null;  // null | 'source' | 'front' | 'rear'
+const GRAB_RADIUS = 18; // pixels on screen to grab an entity
+
+function screenToWorld(sx, sy) {
+  // Invert the camera transform: screen px → world px → metres
+  const wx = (sx - camPanX - W / 2) / camZoom + W / 2;
+  const wy = (sy - camPanY - H / 2) / camZoom + H / 2;
+  return { mx: wx / PPM, my: wy / PPM };
+}
+
+function worldToScreen(mx, my) {
+  const px = mx * PPM;
+  const py = my * PPM;
+  const sx = (px - W / 2) * camZoom + W / 2 + camPanX;
+  const sy = (py - H / 2) * camZoom + H / 2 + camPanY;
+  return { sx, sy };
+}
+
+function hitTest(screenX, screenY) {
+  // Check source
+  const src = worldToScreen(sourceX, sourceY);
+  if (Math.hypot(screenX - src.sx, screenY - src.sy) < GRAB_RADIUS) return 'source';
+  // Check front observer
+  const fo = worldToScreen(observerFrontX, observerY);
+  if (Math.hypot(screenX - fo.sx, screenY - fo.sy) < GRAB_RADIUS) return 'front';
+  // Check rear observer
+  const ro = worldToScreen(observerRearX, observerY);
+  if (Math.hypot(screenX - ro.sx, screenY - ro.sy) < GRAB_RADIUS) return 'rear';
+  return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (W / rect.width);
+  const my = (e.clientY - rect.top) * (H / rect.height);
+
+  // Check if clicking on a draggable entity
+  const hit = hitTest(mx, my);
+  if (hit) {
+    dragTarget = hit;
+    canvas.style.cursor = 'move';
+    return;
+  }
+
+  // Otherwise start panning
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  dragPanStartX = camPanX;
+  dragPanStartY = camPanY;
+  canvas.classList.add('dragging');
+});
+window.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = (e.clientX - rect.left) * (W / rect.width);
+  const sy = (e.clientY - rect.top) * (H / rect.height);
+
+  if (dragTarget) {
+    const world = screenToWorld(sx, sy);
+    if (dragTarget === 'source') {
+      sourceX = world.mx;
+      // Keep on the source Y line
+    } else if (dragTarget === 'front') {
+      observerFrontX = world.mx;
+    } else if (dragTarget === 'rear') {
+      observerRearX = world.mx;
+    }
+    return;
+  }
+
+  if (isDragging) {
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    camPanX = dragPanStartX + (e.clientX - dragStartX) * scaleX;
+    camPanY = dragPanStartY + (e.clientY - dragStartY) * scaleY;
+    return;
+  }
+
+  // Hover cursor hint
+  const hit = hitTest(sx, sy);
+  if (hit) {
+    canvas.style.cursor = 'move';
+  } else {
+    canvas.style.cursor = 'grab';
+  }
+});
+window.addEventListener('mouseup', () => {
+  if (dragTarget) {
+    dragTarget = null;
+    canvas.style.cursor = 'grab';
+    return;
+  }
+  isDragging = false;
+  canvas.classList.remove('dragging');
+});
+
+// Touch support for pan
+let touchId = null, touchStartX, touchStartY, touchPanStartX, touchPanStartY;
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    const t = e.touches[0];
+    touchId = t.identifier;
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    touchPanStartX = camPanX;
+    touchPanStartY = camPanY;
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', (e) => {
+  if (touchId === null) return;
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      const rect = canvas.getBoundingClientRect();
+      camPanX = touchPanStartX + (t.clientX - touchStartX) * (W / rect.width);
+      camPanY = touchPanStartY + (t.clientY - touchStartY) * (H / rect.height);
+      e.preventDefault();
+    }
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', () => { touchId = null; });
+
+// Zoom buttons
+document.getElementById('btnZoomIn').addEventListener('click', () => {
+  setZoom(camZoom * 1.3, W / 2, H / 2);
+});
+document.getElementById('btnZoomOut').addEventListener('click', () => {
+  setZoom(camZoom / 1.3, W / 2, H / 2);
+});
+document.getElementById('btnZoomReset').addEventListener('click', () => {
+  camZoom = 1; camPanX = 0; camPanY = 0;
+  zoomLevelEl.textContent = '100%';
+});
 
 // ===========================================================
 //  UPDATE  (physics)
@@ -516,9 +881,32 @@ function update(dt) {
   // Move source
   sourceX += sourceSpeed * dt;
 
-  // Wrap source (all in metres)
-  if (sourceX > W_M + 1.6) {
-    sourceX = -1.6;
+  // Move observers
+  observerFrontX += obsFrontSpeed * dt;
+  observerRearX  += obsRearSpeed  * dt;
+
+  // Clamp observers to world bounds
+  observerFrontX = Math.max(0, Math.min(W_M, observerFrontX));
+  observerRearX  = Math.max(0, Math.min(W_M, observerRearX));
+
+  // Wrap source when it exits the VISIBLE viewport (accounts for zoom/pan)
+  // Convert canvas right edge (W) to world-pixel coords, then to metres
+  // Screen-to-world: wx = (sx - camPanX - W/2) / camZoom + W/2
+  const visibleRightPx  = (W - camPanX - W / 2) / camZoom + W / 2;
+  const visibleLeftPx   = (0 - camPanX - W / 2) / camZoom + W / 2;
+  const visibleRightM   = visibleRightPx / PPM;
+  const visibleLeftM    = visibleLeftPx  / PPM;
+  const margin = (visibleRightM - visibleLeftM) * 0.05; // small margin
+
+  if (sourceX > visibleRightM + margin) {
+    sourceX = visibleLeftM - margin;
+    observerFrontX = observerFrontXStart;
+    observerRearX  = observerRearXStart;
+    frontHits = [];
+    rearHits  = [];
+    perceivedFront = null;
+    perceivedRear  = null;
+    pulses = [];
   }
 
   // Emission timer
@@ -579,9 +967,16 @@ function computePerceivedFreq(hits) {
 function draw() {
   ctx.clearRect(0, 0, W, H);
 
-  // Background
+  // Background (always full canvas)
   ctx.fillStyle = '#fdfdff';
   ctx.fillRect(0, 0, W, H);
+
+  // --- Apply camera transform ---
+  ctx.save();
+  ctx.translate(camPanX, camPanY);
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(camZoom, camZoom);
+  ctx.translate(-W / 2, -H / 2);
 
   // Pixel positions (cached per frame)
   const srcPxX = toPixX(sourceX);
@@ -592,11 +987,11 @@ function draw() {
 
   // Ground line
   ctx.strokeStyle = '#c8cdd5';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1 / camZoom;
   ctx.setLineDash([6, 4]);
   ctx.beginPath();
-  ctx.moveTo(0, srcPxY);
-  ctx.lineTo(W, srcPxY);
+  ctx.moveTo(-2000, srcPxY);
+  ctx.lineTo(W + 2000, srcPxY);
   ctx.stroke();
   ctx.setLineDash([]);
 
@@ -684,15 +1079,22 @@ function draw() {
     ctx.font = 'bold 12px Segoe UI, sans-serif';
     ctx.fillText('Source', srcPxX + 12, srcPxY - 16);
 
-    ctx.fillStyle = '#555';
-    ctx.font = '12px Segoe UI, sans-serif';
-    ctx.fillText('Mach ' + mach.toFixed(2), 12, 22);
-
     if (sourceSpeed > 0) {
       ctx.fillStyle = 'rgba(180,60,60,0.4)';
       ctx.font = '20px sans-serif';
       ctx.fillText('→', srcPxX + 14, srcPxY + 6);
     }
+  }
+
+  // --- End camera transform ---
+  ctx.restore();
+
+  // --- HUD (screen-space, unaffected by zoom/pan) ---
+  if (chkLabels.checked) {
+    const mach2 = sourceSpeed / waveSpeed;
+    ctx.fillStyle = '#555';
+    ctx.font = '12px Segoe UI, sans-serif';
+    ctx.fillText('Mach ' + mach2.toFixed(2), 12, 22);
   }
 
   updateReadouts();
@@ -778,20 +1180,29 @@ function updateReadouts() {
   roEmit.textContent = emitFreq.toFixed(1) + ' Hz';
   roMach.textContent = mach.toFixed(2);
 
-  // Theoretical
-  if (sourceSpeed > 0 && sourceSpeed < waveSpeed) {
-    const fFront = emitFreq * waveSpeed / (waveSpeed - sourceSpeed);
-    const fRear  = emitFreq * waveSpeed / (waveSpeed + sourceSpeed);
+  // Theoretical  (general Doppler with moving observers)
+  // f' = f * (v ± v_o) / (v ∓ v_s)
+  const voFT = -obsFrontSpeed;  // front observer: leftward = toward source
+  const voRT =  obsRearSpeed;   // rear observer: rightward = toward source (behind)
+
+  if (sourceSpeed >= 0 && sourceSpeed < waveSpeed) {
+    const fFront = emitFreq * (waveSpeed + voFT) / (waveSpeed - sourceSpeed);
+    const fRear  = emitFreq * (waveSpeed + voRT) / (waveSpeed + sourceSpeed);
     roFront.textContent = fFront.toFixed(2) + ' Hz';
     roRear.textContent  = fRear.toFixed(2)  + ' Hz';
-  } else if (sourceSpeed <= 0) {
+  } else if (sourceSpeed <= 0 && obsFrontSpeed === 0 && obsRearSpeed === 0) {
     roFront.textContent = emitFreq.toFixed(2) + ' Hz';
     roRear.textContent  = emitFreq.toFixed(2) + ' Hz';
   } else if (sourceSpeed >= waveSpeed) {
     roFront.textContent = '∞ (shock)';
-    // rear
-    const fRear = emitFreq * waveSpeed / (waveSpeed + sourceSpeed);
+    const fRear = emitFreq * (waveSpeed + voRT) / (waveSpeed + sourceSpeed);
     roRear.textContent = fRear.toFixed(2) + ' Hz';
+  } else {
+    // source stationary but observers moving
+    const fFront = emitFreq * (waveSpeed + voFT) / waveSpeed;
+    const fRear  = emitFreq * (waveSpeed + voRT) / waveSpeed;
+    roFront.textContent = fFront.toFixed(2) + ' Hz';
+    roRear.textContent  = fRear.toFixed(2)  + ' Hz';
   }
 
   // Show measured values in parentheses when available
@@ -803,7 +1214,7 @@ function updateReadouts() {
   }
 
   // Show speed of sound reference
-  roMach.title = 'v_s / v = ' + sourceSpeed.toFixed(1) + ' / ' + waveSpeed.toFixed(1) + ' m/s';
+  roMach.title = 'v_s / v = ' + sourceSpeed.toFixed(0) + ' / ' + waveSpeed.toFixed(0) + ' m/s';
 }
 
 // ===========================================================
@@ -823,6 +1234,9 @@ function loop(ts) {
 
   update(dt);
   draw();
+  // Continuously try to keep audio alive when sound is enabled
+  if (hadGesture && soundEnabled && !audioReady) ensureAudio();
+  if (hadGesture && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   updateAudio();
   requestAnimationFrame(loop);
 }
