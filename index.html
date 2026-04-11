@@ -261,21 +261,17 @@
       <input type="range" id="sliderWaveSpeed" min="50" max="700" value="343" step="1">
     </div>
     <div class="ctrl-group">
-      <label>Emission Frequency (f) <span class="val" id="valFreq">3.0 Hz</span></label>
-      <input type="range" id="sliderFreq" min="0.5" max="8" value="3" step="0.1">
+      <label>Frequency (f) <span class="val" id="valFreq">440 Hz</span></label>
+      <input type="range" id="sliderFreq" min="150" max="800" value="440" step="1">
     </div>
   </div>
 
-  <!-- Observers panel -->
+  <!-- Observer panel -->
   <div class="panel">
-    <div class="panel-header">Observers</div>
+    <div class="panel-header">Observer</div>
     <div class="ctrl-group">
-      <label style="color:#d63030">Front Observer Speed <span class="val" id="valObsFront">0 m/s</span></label>
-      <input type="range" class="red" id="sliderObsFront" min="-400" max="400" value="0" step="1">
-    </div>
-    <div class="ctrl-group">
-      <label style="color:#2e7d32">Rear Observer Speed <span class="val" id="valObsRear">0 m/s</span></label>
-      <input type="range" class="green" id="sliderObsRear" min="-400" max="400" value="0" step="1">
+      <label style="color:#2563eb">Observer Speed <span class="val" id="valObsSpeed">0 m/s</span></label>
+      <input type="range" id="sliderObsSpeed" min="-400" max="400" value="0" step="1">
     </div>
   </div>
 
@@ -284,17 +280,12 @@
     <div class="panel-header">Audio</div>
     <div class="audio-panel" id="audioPanel">
       <label class="inline"><input type="checkbox" id="chkSound" checked> Sound On</label>
-      <label>Base Tone <span class="val" id="valTone">440 Hz</span>
-        <input type="range" id="sliderTone" min="150" max="800" value="440" step="1">
-      </label>
       <label>Volume <span class="val" id="valVolume">40%</span>
         <input type="range" id="sliderVolume" min="0" max="100" value="40" step="1">
       </label>
       <label>Listen as
         <select id="selListener">
-          <option value="both" selected>Both (Stereo)</option>
-          <option value="front">Front Observer</option>
-          <option value="rear">Rear Observer</option>
+          <option value="observer" selected>Observer</option>
           <option value="source">Source (emitted)</option>
         </select>
       </label>
@@ -333,9 +324,8 @@
 
 <!-- Readouts -->
 <div class="readouts" id="readoutsPanel">
-  <div class="readout">Emitted f<br><span class="rval" id="roEmit">3.0 Hz</span></div>
-  <div class="readout" style="color:#d63030">Front f<br><span class="rval" id="roFront">—</span></div>
-  <div class="readout" style="color:#2e7d32">Rear f<br><span class="rval" id="roRear">—</span></div>
+  <div class="readout">Emitted f<br><span class="rval" id="roEmit">440 Hz</span></div>
+  <div class="readout" style="color:#2563eb">Perceived f<br><span class="rval" id="roPerceived">—</span></div>
   <div class="readout">Mach #<br><span class="rval" id="roMach">0.60</span></div>
 </div>
 
@@ -367,10 +357,8 @@ function toPixR(m) { return m * PPM; }  // radius / length
 
 // All positions & speeds are now in METRES / METRES-PER-SECOND
 const sourceY = H_M * 0.48;            // ≈ 4.03 m
-const observerFrontXStart = W_M * 0.82; // ≈ 14.76 m
-const observerRearXStart  = W_M * 0.18; // ≈ 3.24 m
-let observerFrontX = observerFrontXStart;
-let observerRearX  = observerRearXStart;
+const observerXStart = W_M * 0.82;      // ≈ 14.76 m
+let observerX = observerXStart;
 const observerY = sourceY;
 const sourceXStart = W_M * 0.065;     // ≈ same proportional start as before
 
@@ -397,15 +385,17 @@ let dragPanStartY = 0;
 // Parameters (updated from sliders) – real-world m/s
 let sourceSpeed  = 206;                // m/s (≈ Mach 0.60)
 let waveSpeed    = 343;                // m/s (speed of sound in air at 20°C)
-let emitFreq     = 3;                  // pulses per second
-let obsFrontSpeed = 0;                 // m/s (positive = rightward)
-let obsRearSpeed  = 0;                 // m/s
+let emitFreq     = toneToVisualRate(440);  // pulses per second (scales with frequency)
+
+// Map audio frequency (150-800 Hz) to a visible emission rate (1.5-6 pulses/sec)
+function toneToVisualRate(f) {
+  return 1.5 + (f - 150) * (6 - 1.5) / (800 - 150);
+}
+let obsSpeed     = 0;                  // m/s (positive = rightward)
 
 // Observer hit tracking for perceived frequency
-let frontHits = [];       // timestamps when a wavefront crosses front observer
-let rearHits  = [];
-let perceivedFront = null;
-let perceivedRear  = null;
+let obsHits = [];         // timestamps when a wavefront crosses observer
+let perceivedObs = null;
 
 // ===========================================================
 //  AUDIO  (Web Audio API)
@@ -433,27 +423,14 @@ function initAudio() {
     masterGain.gain.value = 0;
     masterGain.connect(audioCtx.destination);
 
-    // Front observer oscillator → gain → panner → master
+    // Observer oscillator → gain → master
     oscFront  = audioCtx.createOscillator();
     gainFront = audioCtx.createGain();
-    panFront  = audioCtx.createStereoPanner();
     oscFront.type = 'sine';
     oscFront.frequency.value = baseTone;
     gainFront.gain.value = 0;
-    oscFront.connect(gainFront).connect(panFront).connect(masterGain);
-    panFront.pan.value = 0.7;   // right
+    oscFront.connect(gainFront).connect(masterGain);
     oscFront.start();
-
-    // Rear observer oscillator → gain → panner → master
-    oscRear  = audioCtx.createOscillator();
-    gainRear = audioCtx.createGain();
-    panRear  = audioCtx.createStereoPanner();
-    oscRear.type = 'sine';
-    oscRear.frequency.value = baseTone;
-    gainRear.gain.value = 0;
-    oscRear.connect(gainRear).connect(panRear).connect(masterGain);
-    panRear.pan.value = -0.7;  // left
-    oscRear.start();
 
     audioReady = true;
     document.getElementById('audioHint').style.display = 'none';
@@ -474,81 +451,45 @@ function updateAudio() {
 
   const mach = sourceSpeed / waveSpeed;
 
-  // --- Compute Doppler-shifted frequencies ---
-  // General formula: f' = f * (v ± v_o) / (v ∓ v_s)
-  // Sign convention: source moves right (+), observer moving toward source is +
-  let fFront, fRear, fSource;
-  fSource = baseTone;  // emitted tone
+  // --- Compute Doppler-shifted frequency for single observer ---
+  // Determine if observer is ahead or behind source
+  const obsAhead = observerX > sourceX;
+  // v_o toward source: if observer ahead, moving left = toward; if behind, moving right = toward
+  const voToward = obsAhead ? -obsSpeed : obsSpeed;
+  // v_s toward observer
+  const vsDenom = obsAhead ? (waveSpeed - sourceSpeed) : (waveSpeed + sourceSpeed);
 
-  // Relative velocity of front observer toward source:
-  // Source approaches from left, so "toward source" for front observer = leftward = negative speed
-  // v_o_front toward source = -obsFrontSpeed  (if observer moves left, it's toward source)
-  // v_s toward front observer = +sourceSpeed
-  // f' = f * (v + v_o_toward) / (v - v_s_toward)
-  const voFrontToward = -obsFrontSpeed;  // front obs moving left → toward source
-  const voRearToward  =  obsRearSpeed;   // rear obs moving right → toward source (which is ahead)
-
-  if (waveSpeed > sourceSpeed) {
-    fFront = baseTone * (waveSpeed + voFrontToward) / (waveSpeed - sourceSpeed);
-    fRear  = baseTone * (waveSpeed + voRearToward)  / (waveSpeed + sourceSpeed);
-  } else if (sourceSpeed <= 0 && obsFrontSpeed === 0 && obsRearSpeed === 0) {
-    fFront = baseTone;
-    fRear  = baseTone;
+  let fObs;
+  if (listenerMode === 'source') {
+    fObs = baseTone;
+  } else if (Math.abs(vsDenom) < 0.01) {
+    fObs = baseTone * 6; // near-shock
+  } else if (vsDenom > 0) {
+    fObs = baseTone * (waveSpeed + voToward) / vsDenom;
   } else {
-    // Supersonic
-    fFront = baseTone * 6;
-    fRear  = baseTone * (waveSpeed + voRearToward) / (waveSpeed + sourceSpeed);
+    // Supersonic and observer is ahead
+    fObs = baseTone * 6;
   }
+  fObs = Math.min(Math.max(fObs, 60), 4000);
 
-  // Clamp to audible range
-  fFront = Math.min(Math.max(fFront, 60), 4000);
-  fRear  = Math.min(Math.max(fRear,  60), 4000);
+  // Distance-based attenuation
+  const dObs = Math.abs(sourceX - observerX);
+  const refDist = 1.0;
+  const attObs = Math.min(1, refDist / Math.max(dObs, 0.3));
 
-  // --- Distance-based volume attenuation (1/d, clamped) ---
-  const dFront = Math.abs(sourceX - observerFrontX);
-  const dRear  = Math.abs(sourceX - observerRearX);
-  const refDist = 1.0;  // reference distance in metres
-  const attFront = Math.min(1, refDist / Math.max(dFront, 0.3));
-  const attRear  = Math.min(1, refDist / Math.max(dRear,  0.3));
+  oscFront.frequency.setTargetAtTime(fObs, t, 0.03);
 
-  // --- Set oscillator frequencies ---
-  oscFront.frequency.setTargetAtTime(fFront, t, 0.03);
-  oscRear.frequency.setTargetAtTime(fRear, t, 0.03);
-
-  // --- Set per-observer gains based on listener mode ---
-  let gF = 0, gR = 0;
-  switch (listenerMode) {
-    case 'front':
-      gF = attFront; gR = 0;
-      panFront.pan.setTargetAtTime(0, t, 0.05);  // center
-      break;
-    case 'rear':
-      gF = 0; gR = attRear;
-      panRear.pan.setTargetAtTime(0, t, 0.05);   // center
-      break;
-    case 'source':
-      // Play the un-shifted emitted tone through the front oscillator
-      oscFront.frequency.setTargetAtTime(baseTone, t, 0.03);
-      gF = 1; gR = 0;
-      panFront.pan.setTargetAtTime(0, t, 0.05);
-      break;
-    default: // 'both'
-      gF = attFront; gR = attRear;
-      panFront.pan.setTargetAtTime(0.7, t, 0.05);
-      panRear.pan.setTargetAtTime(-0.7, t, 0.05);
-      break;
-  }
-
-  // When supersonic, silence front observer
-  // (they wouldn't hear the source until the cone passes them)
-  if (mach >= 1 && listenerMode !== 'source') {
-    // Check if the shock cone has passed the front observer
-    // Simple heuristic: if source is still behind or at the observer, silence
-    if (sourceX < observerFrontX) gF = 0;
+  let gF = 0;
+  if (listenerMode === 'source') {
+    oscFront.frequency.setTargetAtTime(baseTone, t, 0.03);
+    gF = 1;
+  } else {
+    gF = attObs;
+    // Supersonic: silence if source hasn't passed observer yet
+    if (mach >= 1 && obsAhead && sourceX < observerX) gF = 0;
   }
 
   gainFront.gain.setTargetAtTime(gF, t, 0.04);
-  gainRear.gain.setTargetAtTime(gR, t, 0.04);
 }
 
 // Resume AudioContext on any user gesture (browser autoplay policy)
@@ -585,14 +526,10 @@ document.addEventListener('visibilitychange', () => {
 // ===========================================================
 const sliderSrcSpeed = document.getElementById('sliderSrcSpeed');
 const sliderWaveSpeed = document.getElementById('sliderWaveSpeed');
-const sliderFreq     = document.getElementById('sliderFreq');
-const sliderObsFront = document.getElementById('sliderObsFront');
-const sliderObsRear  = document.getElementById('sliderObsRear');
+const sliderObsSpeed = document.getElementById('sliderObsSpeed');
 const valSrcSpeed    = document.getElementById('valSrcSpeed');
 const valWaveSpeed   = document.getElementById('valWaveSpeed');
-const valFreq        = document.getElementById('valFreq');
-const valObsFront    = document.getElementById('valObsFront');
-const valObsRear     = document.getElementById('valObsRear');
+const valObsSpeed    = document.getElementById('valObsSpeed');
 const btnPlayPause   = document.getElementById('btnPlayPause');
 const btnReset       = document.getElementById('btnReset');
 const btnSlowMo      = document.getElementById('btnSlowMo');
@@ -602,16 +539,15 @@ const chkReadouts    = document.getElementById('chkReadouts');
 const chkMachCone    = document.getElementById('chkMachCone');
 const chkPath        = document.getElementById('chkPath');
 const readoutsPanel  = document.getElementById('readoutsPanel');
-const roEmit  = document.getElementById('roEmit');
-const roFront = document.getElementById('roFront');
-const roRear  = document.getElementById('roRear');
-const roMach  = document.getElementById('roMach');
+const roEmit      = document.getElementById('roEmit');
+const roPerceived = document.getElementById('roPerceived');
+const roMach      = document.getElementById('roMach');
 
 // Audio UI elements
 const chkSound    = document.getElementById('chkSound');
-const sliderTone  = document.getElementById('sliderTone');
+const sliderTone  = document.getElementById('sliderFreq');  // Frequency slider now controls baseTone
 const sliderVol   = document.getElementById('sliderVolume');
-const valTone     = document.getElementById('valTone');
+const valTone     = document.getElementById('valFreq');
 const valVol      = document.getElementById('valVolume');
 const selListener = document.getElementById('selListener');
 const audioPanel  = document.getElementById('audioPanel');
@@ -626,7 +562,9 @@ try { initAudio(); } catch(e) {}
 
 sliderTone.addEventListener('input', () => {
   baseTone = +sliderTone.value;
+  emitFreq = toneToVisualRate(baseTone);
   valTone.textContent = baseTone + ' Hz';
+  roEmit.textContent = baseTone + ' Hz';
 });
 sliderVol.addEventListener('input', () => {
   volumePct = +sliderVol.value;
@@ -653,21 +591,11 @@ sliderSrcSpeed.addEventListener('input', () => {
 sliderWaveSpeed.addEventListener('input', () => {
   waveSpeed = +sliderWaveSpeed.value;
   valWaveSpeed.textContent = waveSpeed + ' m/s';
-  // Update source label too since Mach depends on wave speed
   valSrcSpeed.textContent = fmtSpeed(sourceSpeed);
 });
-sliderFreq.addEventListener('input', () => {
-  emitFreq = +sliderFreq.value;
-  valFreq.textContent = emitFreq.toFixed(1) + ' Hz';
-  roEmit.textContent = emitFreq.toFixed(1) + ' Hz';
-});
-sliderObsFront.addEventListener('input', () => {
-  obsFrontSpeed = +sliderObsFront.value;
-  valObsFront.textContent = fmtObsSpeed(obsFrontSpeed);
-});
-sliderObsRear.addEventListener('input', () => {
-  obsRearSpeed = +sliderObsRear.value;
-  valObsRear.textContent = fmtObsSpeed(obsRearSpeed);
+sliderObsSpeed.addEventListener('input', () => {
+  obsSpeed = +sliderObsSpeed.value;
+  valObsSpeed.textContent = fmtObsSpeed(obsSpeed);
 });
 
 btnPlayPause.addEventListener('click', () => {
@@ -691,12 +619,9 @@ function resetSim() {
   simTime = 0;
   emitTimer = 0;
   sourceX = sourceXStart;
-  observerFrontX = observerFrontXStart;
-  observerRearX  = observerRearXStart;
-  frontHits = [];
-  rearHits  = [];
-  perceivedFront = null;
-  perceivedRear  = null;
+  observerX = observerXStart;
+  obsHits = [];
+  perceivedObs = null;
   playing = true;
   btnPlayPause.textContent = 'Pause';
   // Reset camera
@@ -758,12 +683,9 @@ function hitTest(screenX, screenY) {
   // Check source
   const src = worldToScreen(sourceX, sourceY);
   if (Math.hypot(screenX - src.sx, screenY - src.sy) < GRAB_RADIUS) return 'source';
-  // Check front observer
-  const fo = worldToScreen(observerFrontX, observerY);
-  if (Math.hypot(screenX - fo.sx, screenY - fo.sy) < GRAB_RADIUS) return 'front';
-  // Check rear observer
-  const ro = worldToScreen(observerRearX, observerY);
-  if (Math.hypot(screenX - ro.sx, screenY - ro.sy) < GRAB_RADIUS) return 'rear';
+  // Check observer
+  const ob = worldToScreen(observerX, observerY);
+  if (Math.hypot(screenX - ob.sx, screenY - ob.sy) < GRAB_RADIUS) return 'observer';
   return null;
 }
 
@@ -798,11 +720,8 @@ window.addEventListener('mousemove', (e) => {
     const world = screenToWorld(sx, sy);
     if (dragTarget === 'source') {
       sourceX = world.mx;
-      // Keep on the source Y line
-    } else if (dragTarget === 'front') {
-      observerFrontX = world.mx;
-    } else if (dragTarget === 'rear') {
-      observerRearX = world.mx;
+    } else if (dragTarget === 'observer') {
+      observerX = world.mx;
     }
     return;
   }
@@ -881,13 +800,11 @@ function update(dt) {
   // Move source
   sourceX += sourceSpeed * dt;
 
-  // Move observers
-  observerFrontX += obsFrontSpeed * dt;
-  observerRearX  += obsRearSpeed  * dt;
+  // Move observer
+  observerX += obsSpeed * dt;
 
-  // Clamp observers to world bounds
-  observerFrontX = Math.max(0, Math.min(W_M, observerFrontX));
-  observerRearX  = Math.max(0, Math.min(W_M, observerRearX));
+  // Clamp observer to world bounds
+  observerX = Math.max(0, Math.min(W_M, observerX));
 
   // Wrap source when it exits the VISIBLE viewport (accounts for zoom/pan)
   // Convert canvas right edge (W) to world-pixel coords, then to metres
@@ -900,12 +817,9 @@ function update(dt) {
 
   if (sourceX > visibleRightM + margin) {
     sourceX = visibleLeftM - margin;
-    observerFrontX = observerFrontXStart;
-    observerRearX  = observerRearXStart;
-    frontHits = [];
-    rearHits  = [];
-    perceivedFront = null;
-    perceivedRear  = null;
+    observerX = observerXStart;
+    obsHits = [];
+    perceivedObs = null;
     pulses = [];
   }
 
@@ -931,25 +845,18 @@ function update(dt) {
     const rPrev = waveSpeed * (simTime - dt - p.birthTime);
     if (rPrev < 0) continue;
 
-    // Front observer
-    const dFront = Math.hypot(p.ox - observerFrontX, p.oy - observerY);
-    if (rPrev < dFront && r >= dFront) {
-      if (!p._hitFront) { p._hitFront = true; frontHits.push(simTime); }
-    }
-    // Rear observer
-    const dRear = Math.hypot(p.ox - observerRearX, p.oy - observerY);
-    if (rPrev < dRear && r >= dRear) {
-      if (!p._hitRear) { p._hitRear = true; rearHits.push(simTime); }
+    // Observer
+    const dObs = Math.hypot(p.ox - observerX, p.oy - observerY);
+    if (rPrev < dObs && r >= dObs) {
+      if (!p._hitObs) { p._hitObs = true; obsHits.push(simTime); }
     }
   }
 
   // Trim old hits (keep last 12)
-  if (frontHits.length > 12) frontHits = frontHits.slice(-12);
-  if (rearHits.length > 12) rearHits = rearHits.slice(-12);
+  if (obsHits.length > 12) obsHits = obsHits.slice(-12);
 
   // Compute perceived frequency from average inter-arrival time (last N)
-  perceivedFront = computePerceivedFreq(frontHits);
-  perceivedRear  = computePerceivedFreq(rearHits);
+  perceivedObs = computePerceivedFreq(obsHits);
 }
 
 function computePerceivedFreq(hits) {
@@ -981,9 +888,8 @@ function draw() {
   // Pixel positions (cached per frame)
   const srcPxX = toPixX(sourceX);
   const srcPxY = toPixY(sourceY);
-  const obsFPxX = toPixX(observerFrontX);
-  const obsRPxX = toPixX(observerRearX);
-  const obsPxY  = toPixY(observerY);
+  const obsPxX = toPixX(observerX);
+  const obsPxY = toPixY(observerY);
 
   // Ground line
   ctx.strokeStyle = '#c8cdd5';
@@ -1055,20 +961,8 @@ function draw() {
     }
   }
 
-  // --- Observers ---
-  drawObserver(obsFPxX, obsPxY, '#d63030', 'Front Observer', true);
-  drawObserver(obsRPxX, obsPxY, '#2e7d32', 'Rear Observer', false);
-
-  // Frequency labels near observers
-  if (chkLabels.checked && sourceSpeed > 0.1) {
-    ctx.font = '12px Segoe UI, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#d63030';
-    ctx.fillText('↑ higher frequency', obsFPxX, obsPxY + 38);
-    ctx.fillStyle = '#2e7d32';
-    ctx.fillText('↓ lower frequency', obsRPxX, obsPxY + 38);
-    ctx.textAlign = 'left';
-  }
+  // --- Observer ---
+  drawObserver(obsPxX, obsPxY, '#2563eb', 'Observer');
 
   // --- Source ---
   drawSource(srcPxX, srcPxY);
@@ -1126,7 +1020,7 @@ function drawSource(x, y) {
   }
 }
 
-function drawObserver(x, y, color, label, isFront) {
+function drawObserver(x, y, color, label) {
   // Small person / pin icon  (x, y already in pixels)
   ctx.beginPath();
   ctx.arc(x, y - 10, 6, 0, Math.PI * 2);
@@ -1159,7 +1053,7 @@ function drawObserver(x, y, color, label, isFront) {
   }
 
   // Pulse flash when wavefront arrives
-  const hitList = isFront ? frontHits : rearHits;
+  const hitList = obsHits;
   if (hitList.length > 0) {
     const last = hitList[hitList.length - 1];
     const age = simTime - last;
@@ -1167,7 +1061,7 @@ function drawObserver(x, y, color, label, isFront) {
       const a = 1 - age / 0.12;
       ctx.beginPath();
       ctx.arc(x, y, 18 + age * 80, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(${color === '#d63030' ? '214,48,48' : '46,125,50'},${(a * 0.5).toFixed(2)})`;
+      ctx.strokeStyle = `rgba(37,99,235,${(a * 0.5).toFixed(2)})`;
       ctx.lineWidth = 2;
       ctx.stroke();
     }
@@ -1177,40 +1071,26 @@ function drawObserver(x, y, color, label, isFront) {
 function updateReadouts() {
   if (!chkReadouts.checked) return;
   const mach = sourceSpeed / waveSpeed;
-  roEmit.textContent = emitFreq.toFixed(1) + ' Hz';
+  roEmit.textContent = baseTone + ' Hz';
   roMach.textContent = mach.toFixed(2);
 
-  // Theoretical  (general Doppler with moving observers)
-  // f' = f * (v ± v_o) / (v ∓ v_s)
-  const voFT = -obsFrontSpeed;  // front observer: leftward = toward source
-  const voRT =  obsRearSpeed;   // rear observer: rightward = toward source (behind)
+  // Theoretical Doppler for single observer
+  const obsAheadR = observerX > sourceX; // is observer ahead of source?
+  const voTowardR = obsAheadR ? -obsSpeed : obsSpeed;
+  const vsDenomR  = obsAheadR ? (waveSpeed - sourceSpeed) : (waveSpeed + sourceSpeed);
 
-  if (sourceSpeed >= 0 && sourceSpeed < waveSpeed) {
-    const fFront = emitFreq * (waveSpeed + voFT) / (waveSpeed - sourceSpeed);
-    const fRear  = emitFreq * (waveSpeed + voRT) / (waveSpeed + sourceSpeed);
-    roFront.textContent = fFront.toFixed(2) + ' Hz';
-    roRear.textContent  = fRear.toFixed(2)  + ' Hz';
-  } else if (sourceSpeed <= 0 && obsFrontSpeed === 0 && obsRearSpeed === 0) {
-    roFront.textContent = emitFreq.toFixed(2) + ' Hz';
-    roRear.textContent  = emitFreq.toFixed(2) + ' Hz';
-  } else if (sourceSpeed >= waveSpeed) {
-    roFront.textContent = '∞ (shock)';
-    const fRear = emitFreq * (waveSpeed + voRT) / (waveSpeed + sourceSpeed);
-    roRear.textContent = fRear.toFixed(2) + ' Hz';
+  if (Math.abs(vsDenomR) < 0.01) {
+    roPerceived.textContent = '∞ (shock)';
+  } else if (vsDenomR > 0) {
+    const fP = baseTone * (waveSpeed + voTowardR) / vsDenomR;
+    roPerceived.textContent = fP.toFixed(1) + ' Hz';
   } else {
-    // source stationary but observers moving
-    const fFront = emitFreq * (waveSpeed + voFT) / waveSpeed;
-    const fRear  = emitFreq * (waveSpeed + voRT) / waveSpeed;
-    roFront.textContent = fFront.toFixed(2) + ' Hz';
-    roRear.textContent  = fRear.toFixed(2)  + ' Hz';
+    roPerceived.textContent = '∞ (shock)';
   }
 
-  // Show measured values in parentheses when available
-  if (perceivedFront !== null) {
-    roFront.textContent += ' (' + perceivedFront.toFixed(1) + ' meas.)';
-  }
-  if (perceivedRear !== null) {
-    roRear.textContent += ' (' + perceivedRear.toFixed(1) + ' meas.)';
+  // Show measured value in parentheses when available
+  if (perceivedObs !== null) {
+    roPerceived.textContent += ' (' + perceivedObs.toFixed(1) + ' meas.)';
   }
 
   // Show speed of sound reference
